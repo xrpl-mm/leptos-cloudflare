@@ -1,0 +1,20 @@
+[package]
+name = "app"
+edition = "2021"
+version = "0.0.1"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+leptos = { version = "0.4.9", default-features = false }
+web-sys = "0.3.61"
+
+# Enable these features depending on the desired context
+# i.e. If rendering on the server use 'ssr' but if running the
+# client you'll want to enable 'hydrate' instead
+# * This example project uses these features
+[features]
+default = ["hydrate"]
+ssr = ["leptos/ssr"]
+hydrate = ["leptos/hydrate"]
