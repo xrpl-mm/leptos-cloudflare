@@ -56,6 +56,6 @@ inside `worker` directory.
 
 ## KV storage file name
 
-For deployment, `wrangler` will derive hashes from worker site files and append it to the file name before the extension. For example, `client_bg.wasm` will become  `client_bg.849eaf9261.wasm`.
+For deployment, `wrangler` will derive hashes from worker site files and append it to the file name before the extension. For example, `client_bg.wasm` will become `client_bg.849eaf9261.wasm`.
 
 However, under local development, the file name does not contain a hash. These discrepancies need to be handled. But this is a todo item and only works for local development right now. This means when you deploy the worker, it is not going to load client-side rendered assets properly.
