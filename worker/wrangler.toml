@@ -5,8 +5,5 @@ compatibility_date = "2023-03-22"
 [build]
 command = "cd ../client && pwd && wasm-pack build --target=web && cd ../worker && cargo install -q worker-build && worker-build --release"
 
-[vars]
-PROFILE = "dev"
-
 [site]
 bucket = "../client/pkg"

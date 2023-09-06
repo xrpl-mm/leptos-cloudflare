@@ -10,14 +10,6 @@ mod utils;
 
 const KV_KEY_PREFIX: &str = "$__MINIFLARE_SITES__$";
 
-#[derive(Debug, Clone)]
-enum Profile {
-    Dev,
-    Prod,
-}
-
-struct TryFromStrToProfileError(String);
-
 struct TryFromKVKeyToFileExtError(String);
 
 struct FileExt(String);
@@ -61,18 +53,6 @@ pub async fn main(req: Request, env: worker::Env, _ctx: worker::Context) -> Resu
             .set("Content-Type", "text/html")?;
         Ok(response)
     }).get_async("/client/:resource", |_req, ctx| async move {
-        let profile = match ctx.env.var("PROFILE") {
-            Ok(profile) => match Profile::try_from(profile.to_string().as_str()) {
-                Ok(profile) => profile,
-                Err(msg) => {
-                    return Response::error(msg.0, 500);
-                }
-            },
-            Err(_) => {
-                return Ok(Response::from_bytes(b"Could not get profile".to_vec())?.with_status(404))
-            }
-        };
-
         let resource = match ctx.param("resource") {
             Some(resource) => resource,
             None => {
@@ -80,33 +60,25 @@ pub async fn main(req: Request, env: worker::Env, _ctx: worker::Context) -> Resu
             }
         };
 
-        match profile {
-            Profile::Dev => {
-                let store = ctx.env.kv("__STATIC_CONTENT")?;
-                let file_name = &format!("{}{}{}", KV_KEY_PREFIX, "/", resource);
-                if let Some(bytes) = store.get(file_name).bytes().await? {
-                    let mut response = Response::from_bytes(bytes)?;
-                    let file_ext = match FileExt::from_str(file_name) {
-                        Ok(file_ext) => file_ext,
-                        Err(msg) => {
-                            return Response::error(msg.0, 500);
-                        }
-                    };
-                    let content_type = ContentType::from(file_ext).to_string();
-                    response
-                        .headers_mut()
-                        // Set the content type header
-                        .set("Content-Type", &content_type)?;
-                    Ok(response)
-                } else {
-                    Ok(Response::from_bytes(b"Not found".to_vec())?.with_status(404))
+        let store = ctx.env.kv("__STATIC_CONTENT")?;
+        let file_name = &format!("{}{}{}", KV_KEY_PREFIX, "/", resource);
+        if let Some(bytes) = store.get(file_name).bytes().await? {
+            let mut response = Response::from_bytes(bytes)?;
+            let file_ext = match FileExt::from_str(file_name) {
+                Ok(file_ext) => file_ext,
+                Err(msg) => {
+                    return Response::error(msg.0, 500);
                 }
-            }
-            Profile::Prod => {
-                // TODO KV store
-                Ok(Response::from_bytes(b"Not yet implemented".to_vec())?.with_status(404))
-            }
-        }
+            };
+            let content_type = ContentType::from(file_ext).to_string();
+            response
+                .headers_mut()
+                // Set the content type header
+                .set("Content-Type", &content_type)?;
+            Ok(response)
+        } else {
+            Ok(Response::from_bytes(b"Not found".to_vec())?.with_status(404))
+                }
     }).run(req, env).await
 }
 
@@ -118,21 +90,6 @@ fn log_request(req: &Request) {
         req.cf().coordinates().unwrap_or_default(),
         req.cf().region().unwrap_or_else(|| "unknown region".into())
     );
-}
-
-impl TryFrom<&str> for Profile {
-    type Error = TryFromStrToProfileError;
-
-    fn try_from(profile: &str) -> std::result::Result<Self, Self::Error> {
-        match profile {
-            "dev" => Ok(Profile::Dev),
-            "prod" => Ok(Profile::Prod),
-            _ => Err(TryFromStrToProfileError(format!(
-                "unrecognized profile: {}",
-                profile
-            ))),
-        }
-    }
 }
 
 impl FromStr for FileExt {
