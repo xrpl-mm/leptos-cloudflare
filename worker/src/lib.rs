@@ -49,7 +49,6 @@ pub async fn main(req: Request, env: worker::Env, _ctx: worker::Context) -> Resu
         let mut response = Response::from_stream(stream)?;
         response
             .headers_mut()
-            // Set the content type header
             .set("Content-Type", "text/html")?;
         Ok(response)
     }).get_async("/client/:resource", |_req, ctx| async move {
@@ -73,7 +72,6 @@ pub async fn main(req: Request, env: worker::Env, _ctx: worker::Context) -> Resu
             let content_type = ContentType::from(file_ext).to_string();
             response
                 .headers_mut()
-                // Set the content type header
                 .set("Content-Type", &content_type)?;
             Ok(response)
         } else {
@@ -96,6 +94,7 @@ impl FromStr for FileExt {
     type Err = TryFromKVKeyToFileExtError;
 
     fn from_str(file_name: &str) -> std::result::Result<Self, Self::Err> {
+        // TODO: handle hashed file name with two dots
         // ASSUMPTION: file only has a single dot in the name
         match file_name.rsplit_once('.') {
             None => Err(TryFromKVKeyToFileExtError(format!(
