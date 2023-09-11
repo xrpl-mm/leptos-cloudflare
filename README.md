@@ -56,6 +56,12 @@ inside `worker` directory.
 
 ## KV storage file name
 
+As with any websites, static files need to be stored somewhere, and Cloudflare offers KV storage as a solution.
+
 For deployment, `wrangler` will derive hashes from worker site files and append it to the file name before the extension. For example, `client_bg.wasm` will become `client_bg.849eaf9261.wasm`.
 
-However, under local development, the file name does not contain a hash. These discrepancies need to be handled. But this is a todo item and only works for local development right now. This means when you deploy the worker, it is not going to load client-side rendered assets properly.
+However, under local development, the file name does not contain a hash. These discrepancies need to be handled. However, `workers-rs` does not offer such a functionality natively.
+
+There's a related PR at https://github.com/cloudflare/workers-rs/pull/308 but it seems that Cloudflare team is not keen on merging the PR or even integrating this feature into `workers-rs` repository.
+
+Therefore, a separate fork has been made at https://github.com/9oelM/workers-rs/commit/00def197b6be6cb43604c7de1fc58523e95b6c84 to install `worker-build` and to serve as a dependency of the `worker` directory.
