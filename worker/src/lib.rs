@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use app::*;
 use futures::StreamExt;
 use leptos::*;
@@ -7,14 +5,6 @@ use leptos_dom::ssr::render_to_stream;
 use worker::*;
 
 mod utils;
-
-const KV_KEY_PREFIX: &str = "$__MINIFLARE_SITES__$";
-
-struct TryFromKVKeyToFileExtError(String);
-
-struct FileExt(String);
-
-struct ContentType(String);
 
 #[event(fetch)]
 pub async fn main(req: Request, env: worker::Env, _ctx: worker::Context) -> Result<Response> {
@@ -25,7 +15,7 @@ pub async fn main(req: Request, env: worker::Env, _ctx: worker::Context) -> Resu
     let router = Router::new();
 
     router.get("/", |_req: Request, _ctx| {
-        let pkg_path = "/client/client";
+        let pkg_path = "/site/client";
         let head = format!(
             r#"<!DOCTYPE html>
             <html lang="en">
@@ -51,32 +41,37 @@ pub async fn main(req: Request, env: worker::Env, _ctx: worker::Context) -> Resu
             .headers_mut()
             .set("Content-Type", "text/html")?;
         Ok(response)
-    }).get_async("/client/:resource", |_req, ctx| async move {
+    }).get_async("/site/:resource", |_req, ctx| async move {
         let resource = match ctx.param("resource") {
             Some(resource) => resource,
             None => {
-                return Ok(Response::from_bytes(b"Not found".to_vec())?.with_status(404))
+                return Response::error("Not found", 404)
             }
         };
 
         let store = ctx.env.kv("__STATIC_CONTENT")?;
-        let file_name = &format!("{}{}{}", KV_KEY_PREFIX, "/", resource);
-        if let Some(bytes) = store.get(file_name).bytes().await? {
+        let file_path = match ctx.env.asset_key(resource) {
+            Ok(file_path) => file_path,
+            Err(_) => {
+                return Response::error("Not found", 404)
+            }
+        };
+
+        if let Some(bytes) = store.get(&file_path).bytes().await? {
             let mut response = Response::from_bytes(bytes)?;
-            let file_ext = match FileExt::from_str(file_name) {
-                Ok(file_ext) => file_ext,
-                Err(msg) => {
-                    return Response::error(msg.0, 500);
-                }
+            let content_type = match mime_guess::from_path(file_path).first() {
+                Some(content_type) => content_type,
+                None => {
+                    return Response::error("Unsupported file type", 415)
+                },
             };
-            let content_type = ContentType::from(file_ext).to_string();
             response
                 .headers_mut()
-                .set("Content-Type", &content_type)?;
+                .set("Content-Type", content_type.essence_str())?;
             Ok(response)
         } else {
-            Ok(Response::from_bytes(b"Not found".to_vec())?.with_status(404))
-                }
+            Response::error("Not found", 404)
+        }
     }).run(req, env).await
 }
 
@@ -88,49 +83,4 @@ fn log_request(req: &Request) {
         req.cf().coordinates().unwrap_or_default(),
         req.cf().region().unwrap_or_else(|| "unknown region".into())
     );
-}
-
-impl FromStr for FileExt {
-    type Err = TryFromKVKeyToFileExtError;
-
-    fn from_str(file_name: &str) -> std::result::Result<Self, Self::Err> {
-        // TODO: handle hashed file name with two dots
-        // ASSUMPTION: file only has a single dot in the name
-        match file_name.rsplit_once('.') {
-            None => Err(TryFromKVKeyToFileExtError(format!(
-                "Unable to extract ext or kv hash from file [{}]",
-                file_name
-            ))),
-            Some(pair) => {
-                let (_, ext) = pair;
-
-                Ok(FileExt(ext.to_owned()))
-            }
-        }
-    }
-}
-
-impl From<FileExt> for ContentType {
-    fn from(file_ext: FileExt) -> Self {
-        let content_type = match file_ext.0.as_str() {
-            "html" => "text/html",
-            "css" => "text/css",
-            "js" => "text/javascript",
-            "json" => "application/json",
-            "png" => "image/png",
-            "jpg" => "image/jpeg",
-            "jpeg" => "image/jpeg",
-            "ico" => "image/x-icon",
-            "wasm" => "application/wasm",
-            _ => "text/plain",
-        };
-
-        ContentType(content_type.to_owned())
-    }
-}
-
-impl ToString for ContentType {
-    fn to_string(&self) -> String {
-        self.0.to_owned()
-    }
 }
