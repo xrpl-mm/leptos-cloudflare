@@ -1,6 +1,6 @@
 # leptos-cf
 
-Leptos SSR done in Cloudflare workers.
+[Leptos SSR](https://leptos-rs.github.io/leptos/ssr/index.html) with [`workers-rs`](https://github.com/cloudflare/workers-rs) backend, deployed directly to Cloudflare using [wrangler](https://github.com/cloudflare/workers-sdk).
 
 ## Prerequisites
 
@@ -28,7 +28,7 @@ Then access the website on localhost.
 
 ## Deployment
 
-Simply run inside `example` directory:
+Run inside `example` directory:
 
 ```console
 wrangler deploy
