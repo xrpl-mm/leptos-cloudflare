@@ -9,7 +9,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 cfg-if = "1.0.0"
 console_log = "1.0.0"
-console_error_panic_hook = "0.1.7"
+console_error_panic_hook = { version = "0.1.7", optional = true }
 leptos = { rev = "6547fcdfb2913e4a07b877747b195cde1a323eab", git = "https://github.com/xrpl-mm/leptos", default-features = false }
 leptos-cf = { path = "../leptos-cf", optional = true }
 leptos_dom = { rev = "6547fcdfb2913e4a07b877747b195cde1a323eab", git = "https://github.com/xrpl-mm/leptos", default-features = false }
@@ -25,6 +25,7 @@ web-sys = "0.3.61"
 
 [features]
 default = ["hydrate"]
+console_error_panic_hook = ["dep:console_error_panic_hook"]
 ssr = [
   "leptos/ssr",
   "leptos_meta/ssr",
@@ -36,5 +37,6 @@ hydrate = [
   "leptos/hydrate", 
   "leptos_meta/hydrate", 
   "leptos_router/hydrate",
-  "leptos_dom/hydrate"
+  "leptos_dom/hydrate",
+  'dep:console_error_panic_hook'
 ]
