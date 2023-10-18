@@ -1,3 +1,3 @@
 [workspace]
-members = ["app", "client", "worker"]
+members = ["example", "leptos-cf"]
 resolver = "2"

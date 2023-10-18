@@ -1,9 +1,0 @@
-name = "ssr-dev"
-main = "build/worker/shim.mjs"
-compatibility_date = "2023-03-22"
-
-[build]
-command = "cd ../client && pwd && wasm-pack build --target=web && cd ../worker && cargo install --git https://github.com/9oelM/workers-rs --rev 00def197b6be6cb43604c7de1fc58523e95b6c84 && worker-build --release"
-
-[site]
-bucket = "../client/pkg"
