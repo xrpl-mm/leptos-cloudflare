@@ -9,3 +9,14 @@ cfg_if! {
         pub fn set_panic_hook() {}
     }
 }
+
+#[cfg(feature = "ssr")]
+use leptos::ServerFnError;
+
+#[cfg(feature = "ssr")]
+pub fn handle_register_server_fn(register_result: Result<(), ServerFnError>) {
+    register_result.unwrap_or_else(|err| match err {
+        ServerFnError::Registration(_) => {}
+        err => panic!("Failed to register: {:?}", err),
+    });
+}

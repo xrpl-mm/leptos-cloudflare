@@ -18,24 +18,10 @@ pub async fn main(
     use utils::set_panic_hook;
     use worker::Router;
 
-    log_request(&req);
+    // Automatic registration of server functions doesn't work for wasm32 server
+    utils::handle_register_server_fn(app::GetPost::register_explicit());
+    utils::handle_register_server_fn(app::ListPostMetadata::register_explicit());
 
-    match app::GetPost::register_explicit() {
-        Ok(_) => worker::console_debug!("Registered GetPost"),
-        // this will run this every single time a request is made,
-        // but we only want to register once, so we ignore the error when it complains
-        // about duplicate registrations
-        Err(ServerFnError::Registration(_)) => {}
-        Err(err) => panic!("Failed to register: {:?}", err),
-    }
-    match app::ListPostMetadata::register_explicit() {
-        Ok(_) => worker::console_debug!("Registered ListPostMetadata"),
-        // this will run this every single time a request is made,
-        // but we only want to register once, so we ignore the error when it complains
-        // about duplicate registrations
-        Err(ServerFnError::Registration(_)) => {}
-        Err(err) => panic!("Failed to register: {:?}", err),
-    }
     set_panic_hook();
 
     let routes = leptos_cf::generate_route_list(|cx| view! { cx,  <App /> }.into_view(cx));
