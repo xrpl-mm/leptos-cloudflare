@@ -1,0 +1,9 @@
+name = "ssr-dev"
+main = "build/worker/shim.mjs"
+compatibility_date = "2023-03-22"
+
+[build]
+command = "wasm-pack build --target=web -- --features hydrate --no-default-features && cargo install --git https://github.com/xrpl-mm/workers-rs --rev f27cf818b40569af28d659706c5d7c09073006c2 && worker-build --release -- --features ssr --no-default-features --bin example"
+
+[site]
+bucket = "./pkg"

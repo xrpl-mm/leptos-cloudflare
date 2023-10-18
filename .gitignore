@@ -20,3 +20,4 @@ build/
 /dist
 pkg
 .env
+.wrangler

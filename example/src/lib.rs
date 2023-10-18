@@ -1,3 +1,7 @@
+#![feature(result_flattening)]
+
+mod app;
+
 use app::App;
 use leptos::{mount_to_body, view};
 
