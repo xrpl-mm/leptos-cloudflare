@@ -20,7 +20,7 @@ log = "0.4.20"
 serde = "1.0.189"
 thiserror = "1.0.49"
 wasm-bindgen = "0.2.84"
-worker = { rev = "00def197b6be6cb43604c7de1fc58523e95b6c84", git = "https://github.com/xrpl-mm/workers-rs" }
+worker = { rev = "3883bf7d5cb599a21b7c279607c29e307bb4ba2e", git = "https://github.com/xrpl-mm/workers-rs" }
 web-sys = "0.3.61"
 
 [features]
