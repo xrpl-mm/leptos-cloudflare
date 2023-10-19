@@ -1,6 +1,6 @@
 name = "ssr-dev"
 main = "build/worker/shim.mjs"
-compatibility_date = "2023-03-22"
+compatibility_date = "2023-08-15"
 
 [build]
 command = "./build.sh"
