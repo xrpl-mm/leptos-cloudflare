@@ -44,10 +44,6 @@ Then, everything related to server-side rendering in `main.rs` gets compiled by 
 
 There is no need to run these commands manually; `wrangler dev` will run them as they are defined in `wrangler.toml`.
 
-## Todos
-
-- 100% interoperability between `workers-rs` routes and `leptos` routes 
-
 ## KV storage file name
 
 As with any websites, static files need to be stored somewhere, and Cloudflare offers KV storage as a solution.

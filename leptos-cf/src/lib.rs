@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use futures::{Stream, StreamExt};
 use leptos::leptos_server::server_fn_by_path;
 use leptos::server_fn::{Encoding, Payload};
@@ -46,6 +48,8 @@ where
     AppFn: Fn(leptos::Scope) -> IV + Clone + Send + 'static,
 {
     pub options: LeptosOptions,
+    /// A set of local directories that should serve static assets from the KV store.
+    pub static_dirs: HashSet<String>,
     pub app_fn: AppFn,
 }
 
@@ -229,7 +233,7 @@ where
 
 /// Serves the static assets from the Cloudflare site's directory.
 /// These assets will be served by Cloudflare's KV Store.
-pub async fn serve_wasm_bindgen_assets<IV, AppFn>(
+pub async fn serve_static_from_kv<IV, AppFn>(
     req: worker::Request,
     ctx: worker::RouteContext<WorkerRouterData<IV, AppFn>>,
 ) -> worker::Result<worker::Response>
@@ -244,7 +248,9 @@ where
         .and_then(|url| url.path_segments())
         .and_then(|mut path_segments| {
             path_segments.next().and_then(|pkg_dir| {
-                if pkg_dir == ctx.data.options.site_pkg_dir {
+                if pkg_dir == ctx.data.options.site_pkg_dir
+                    || ctx.data.static_dirs.contains(pkg_dir)
+                {
                     path_segments.next()
                 } else {
                     None

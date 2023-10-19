@@ -13,7 +13,7 @@ pub fn App(cx: Scope) -> impl IntoView {
     provide_meta_context(cx);
 
     view! { cx,
-        <Stylesheet id="leptos" href="/pkg/ssr_modes.css"/>
+        <Stylesheet id="leptos" href="/static/main.css"/>
         <Title text="Welcome to Leptos"/>
 
         <Router>
@@ -31,14 +31,14 @@ pub fn App(cx: Scope) -> impl IntoView {
                         ssr=SsrMode::PartiallyBlocked
                     />
                     <Route
-                    path="/post/in-order/:id"
-                    view=Post
-                    ssr=SsrMode::InOrder
+                        path="/post/in-order/:id"
+                        view=Post
+                        ssr=SsrMode::InOrder
                     />
                     <Route
-                    path="/post/async/:id"
-                    view=Post
-                    ssr=SsrMode::Async
+                        path="/post/async/:id"
+                        view=Post
+                        ssr=SsrMode::Async
                     />
                     <Route
                         path="/*any"
@@ -73,6 +73,10 @@ fn HomePage(cx: Scope) -> impl IntoView {
 
     view! { cx,
         <h1>"My Great Blog"</h1>
+        <img
+            src="/static/leptos.png"
+            style="width: 150px; height: 100px;"
+        />
         <Suspense fallback=move || view! { cx, <p>"Loading posts..."</p> }>
             <ul>{posts_view}</ul>
         </Suspense>
