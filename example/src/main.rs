@@ -10,6 +10,7 @@ pub async fn main(
     env: worker::Env,
     _ctx: worker::Context,
 ) -> worker::Result<worker::Response> {
+    use std::collections::HashSet;
     use std::{net::SocketAddr, str::FromStr};
 
     use app::App;
@@ -38,6 +39,7 @@ pub async fn main(
 
     let router = Router::with_data(leptos_cf::WorkerRouterData {
         options: leptos_options.clone(),
+        static_dirs: HashSet::from([String::from("static"), String::from("css")]),
         app_fn: app::App,
     });
 
@@ -46,9 +48,10 @@ pub async fn main(
     router
         .leptos_routes(routes)
         .get_async(
-            &format!("/{}/:wasm_bindgen_asset", &leptos_options.site_pkg_dir),
-            leptos_cf::serve_wasm_bindgen_assets,
+            &format!("/{}/:client_asset", &leptos_options.site_pkg_dir),
+            leptos_cf::serve_static_from_kv,
         )
+        .get_async("/static/:asset", leptos_cf::serve_static_from_kv)
         .post_async("/api/:fn_name", leptos_cf::handle_server_fns)
         .run(req, env)
         .await
