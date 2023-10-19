@@ -29,11 +29,10 @@ pub fn App(cx: Scope) -> impl IntoView {
                         view=Post
                         ssr=SsrMode::Async
                     />
-
-                    // <Route
-                    //     path="/*any"
-                    //     view=NotFound
-                    // />
+                    <Route
+                        path="/*any"
+                        view=NotFound
+                    />
                 </Routes>
             </main>
         </Router>
