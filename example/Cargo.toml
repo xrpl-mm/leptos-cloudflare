@@ -11,7 +11,7 @@ cfg-if = "1.0.0"
 console_log = "1.0.0"
 console_error_panic_hook = { version = "0.1.7", optional = true }
 leptos = { rev = "6547fcdfb2913e4a07b877747b195cde1a323eab", git = "https://github.com/xrpl-mm/leptos", default-features = false }
-leptos-cf = { path = "../leptos-cf", optional = true }
+leptos-cloudflare = { path = "../leptos-cloudflare", optional = true }
 leptos_dom = { rev = "6547fcdfb2913e4a07b877747b195cde1a323eab", git = "https://github.com/xrpl-mm/leptos", default-features = false }
 leptos_router = { rev = "6547fcdfb2913e4a07b877747b195cde1a323eab", git = "https://github.com/xrpl-mm/leptos", default-features = false }
 leptos_meta = { rev = "6547fcdfb2913e4a07b877747b195cde1a323eab", git = "https://github.com/xrpl-mm/leptos", default-features = false }
@@ -31,7 +31,7 @@ ssr = [
   "leptos_meta/ssr",
   "leptos_router/ssr",
   "leptos_dom/ssr",
-  "dep:leptos-cf"
+  "dep:leptos-cloudflare"
 ]
 hydrate = [
   "leptos/hydrate", 

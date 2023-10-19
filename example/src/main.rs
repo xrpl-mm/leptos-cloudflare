@@ -15,7 +15,7 @@ pub async fn main(
 
     use app::App;
     use leptos::*;
-    use leptos_cf::{self, LeptosRoutes};
+    use leptos_cloudflare::{self, LeptosRoutes};
     use utils::set_panic_hook;
     use worker::Router;
 
@@ -25,7 +25,7 @@ pub async fn main(
 
     set_panic_hook();
 
-    let routes = leptos_cf::generate_route_list(|cx| view! { cx,  <App /> }.into_view(cx));
+    let routes = leptos_cloudflare::generate_route_list(|cx| view! { cx,  <App /> }.into_view(cx));
 
     // Manually specify options, because worker doesn't have access to local fs
     let leptos_options = LeptosOptions {
@@ -37,7 +37,7 @@ pub async fn main(
         reload_port: 3001,
     };
 
-    let router = Router::with_data(leptos_cf::WorkerRouterData {
+    let router = Router::with_data(leptos_cloudflare::WorkerRouterData {
         options: leptos_options.clone(),
         static_dirs: HashSet::from([String::from("static"), String::from("css")]),
         app_fn: app::App,
@@ -49,10 +49,10 @@ pub async fn main(
         .leptos_routes(routes)
         .get_async(
             &format!("/{}/:client_asset", &leptos_options.site_pkg_dir),
-            leptos_cf::serve_static_from_kv,
+            leptos_cloudflare::serve_static_from_kv,
         )
-        .get_async("/static/:asset", leptos_cf::serve_static_from_kv)
-        .post_async("/api/:fn_name", leptos_cf::handle_server_fns)
+        .get_async("/static/:asset", leptos_cloudflare::serve_static_from_kv)
+        .post_async("/api/:fn_name", leptos_cloudflare::handle_server_fns)
         .run(req, env)
         .await
 }

@@ -1,5 +1,5 @@
 [package]
-name = "leptos-cf"
+name = "leptos-cloudflare"
 version = "0.1.0"
 edition = "2021"
 
@@ -10,8 +10,8 @@ futures = "0.3"
 leptos = { rev = "6547fcdfb2913e4a07b877747b195cde1a323eab", git = "https://github.com/xrpl-mm/leptos", default-features = false, features = ["ssr"] }
 leptos_router = { rev = "6547fcdfb2913e4a07b877747b195cde1a323eab", git = "https://github.com/xrpl-mm/leptos", default-features = false, features = ["ssr"] }
 leptos_meta = { rev = "6547fcdfb2913e4a07b877747b195cde1a323eab", git = "https://github.com/xrpl-mm/leptos", default-features = false, features = ["ssr"] }
-leptos_reactive = { git = "https://github.com/xrpl-mm/leptos.git", rev = "6547fcdfb2913e4a07b877747b195cde1a323eab", default-features = false, features = ["ssr"] }
-leptos_integration_utils = { git = "https://github.com/xrpl-mm/leptos.git", rev = "6547fcdfb2913e4a07b877747b195cde1a323eab" }
+leptos_reactive = { rev = "6547fcdfb2913e4a07b877747b195cde1a323eab", git = "https://github.com/xrpl-mm/leptos",  default-features = false, features = ["ssr"] }
+leptos_integration_utils = { rev = "6547fcdfb2913e4a07b877747b195cde1a323eab", git = "https://github.com/xrpl-mm/leptos" }
 mime_guess = "2.0.4"
 tracing = "0.1.39"
 wasm-bindgen = "0.2.86"

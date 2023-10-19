@@ -1,4 +1,4 @@
-# leptos-cf
+# leptos-cloudflare
 
 [Leptos SSR](https://leptos-rs.github.io/leptos/ssr/index.html) with [`workers-rs`](https://github.com/cloudflare/workers-rs) backend, deployed directly to Cloudflare using [wrangler](https://github.com/cloudflare/workers-sdk).
 
