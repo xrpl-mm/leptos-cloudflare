@@ -19,15 +19,26 @@ pub fn App(cx: Scope) -> impl IntoView {
         <Router>
             <main>
                 <Routes>
-                    // We’ll load the home page with out-of-order streaming and <Suspense/>
                     <Route path="/" view=HomePage />
-
-                    // We'll load the posts with async rendering, so they can set
-                    // the title and metadata *after* loading the data
                     <Route
-                        path="/post/:id"
+                        path="/post/out-of-order/:id"
                         view=Post
-                        ssr=SsrMode::Async
+                        ssr=SsrMode::OutOfOrder
+                    />
+                    <Route
+                        path="/post/partially-blocked/:id"
+                        view=Post
+                        ssr=SsrMode::PartiallyBlocked
+                    />
+                    <Route
+                    path="/post/in-order/:id"
+                    view=Post
+                    ssr=SsrMode::InOrder
+                    />
+                    <Route
+                    path="/post/async/:id"
+                    view=Post
+                    ssr=SsrMode::Async
                     />
                     <Route
                         path="/*any"
@@ -48,7 +59,13 @@ fn HomePage(cx: Scope) -> impl IntoView {
             .clone()
             .map(|posts| {
                 posts.iter()
-                .map(|post| view! { cx, <li><a href=format!("/post/{}", post.id)>{&post.title}</a></li>})
+                .map(|post| view! { cx, <ul>
+                    <li><a href=format!("/post/out-of-order/{}", post.id)>out of order: {&post.title}</a></li>
+                    <li><a href=format!("/post/partially-blocked/{}", post.id)>partially blocked: {&post.title}</a></li>
+                    <li><a href=format!("/post/in-order/{}", post.id)>in order: {&post.title}</a></li>
+                    <li><a href=format!("/post/async/{}", post.id)>async: {&post.title}</a></li>
+                    </ul>
+                })
                 .collect_view(cx)
             })
         )
