@@ -115,9 +115,8 @@ fn Post() -> impl IntoView {
             Err(e) => Err(e),
             Ok(id) => get_post(id.0)
                 .await
-                .map(|data| data.ok_or(PostError::PostNotFound))
-                .map_err(|_| PostError::ServerError)
-                .flatten(),
+                .and_then(|data| data.ok_or(PostError::PostNotFound.into()))
+                .map_err(|_| PostError::ServerError),
         }
     });
 
