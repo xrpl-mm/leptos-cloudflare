@@ -16,7 +16,7 @@ pub fn hydrate() {
     // Verify wasm hydrate binding was called on the client
     console::log_1(&"Preparing to mount client...".into());
 
-    mount_to_body(|cx| {
-        view! { cx, <App /> }
+    mount_to_body(|| {
+        view! { <App /> }
     });
 }

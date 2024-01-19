@@ -8,11 +8,11 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 #[component]
-pub fn App(cx: Scope) -> impl IntoView {
+pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
-    provide_meta_context(cx);
+    provide_meta_context();
 
-    view! { cx,
+    view! {
         <Stylesheet id="leptos" href="/static/main.css"/>
         <Title text="Welcome to Leptos"/>
 
@@ -51,33 +51,36 @@ pub fn App(cx: Scope) -> impl IntoView {
 }
 
 #[component]
-fn HomePage(cx: Scope) -> impl IntoView {
+fn HomePage() -> impl IntoView {
     // load the posts
-    let posts = create_resource(cx, || (), |_| async { list_post_metadata().await });
+    let posts = create_resource(|| (), |_| async { list_post_metadata().await });
     let posts_view = move || {
-        posts.with(cx, |posts| posts
+        posts.with(|posts| posts
             .clone()
             .map(|posts| {
-                posts.iter()
-                .map(|post| view! { cx, <ul>
-                    <li><a href=format!("/post/out-of-order/{}", post.id)>out of order: {&post.title}</a></li>
-                    <li><a href=format!("/post/partially-blocked/{}", post.id)>partially blocked: {&post.title}</a></li>
-                    <li><a href=format!("/post/in-order/{}", post.id)>in order: {&post.title}</a></li>
-                    <li><a href=format!("/post/async/{}", post.id)>async: {&post.title}</a></li>
+                posts
+                .map(|posts| {
+                    posts.iter()
+                    .map(|post| view! {<ul>
+                        <li><a href=format!("/post/out-of-order/{}", post.id)>out of order: {&post.title}</a></li>
+                        <li><a href=format!("/post/partially-blocked/{}", post.id)>partially blocked: {&post.title}</a></li>
+                        <li><a href=format!("/post/in-order/{}", post.id)>in order: {&post.title}</a></li>
+                        <li><a href=format!("/post/async/{}", post.id)>async: {&post.title}</a></li>
                     </ul>
+                    })
+                    .collect_view()
                 })
-                .collect_view(cx)
             })
         )
     };
 
-    view! { cx,
+    view! {
         <h1>"My Great Blog"</h1>
         <img
             src="/static/leptos.png"
             style="width: 150px; height: 100px;"
         />
-        <Suspense fallback=move || view! { cx, <p>"Loading posts..."</p> }>
+        <Suspense fallback=move || view! { <p>"Loading posts..."</p> }>
             <ul>{posts_view}</ul>
         </Suspense>
     }
@@ -104,10 +107,10 @@ impl IntoParam for PostId {
 }
 
 #[component]
-fn Post(cx: Scope) -> impl IntoView {
-    let query = use_params::<PostParams>(cx);
+fn Post() -> impl IntoView {
+    let query = use_params::<PostParams>();
     let id = move || query.with(|q| q.as_ref().map(|q| q.id).map_err(|_| PostError::InvalidId));
-    let post = create_resource(cx, id, |id| async move {
+    let post = create_resource(id, |id| async move {
         match id {
             Err(e) => Err(e),
             Ok(id) => get_post(id.0)
@@ -119,34 +122,36 @@ fn Post(cx: Scope) -> impl IntoView {
     });
 
     let post_view = move || {
-        post.with(cx, |post| {
+        post.with(|post| {
             post.clone().map(|post| {
-                view! { cx,
-                    // render content
-                    <h1>{&post.title}</h1>
-                    <p>{&post.content}</p>
+                post.map(|post| {
+                    view! {
+                        // render content
+                        <h1>{&post.title}</h1>
+                        <p>{&post.content}</p>
 
-                    // since we're using async rendering for this page,
-                    // this metadata should be included in the actual HTML <head>
-                    // when it's first served
-                    <Title text=post.title/>
-                    <Meta name="description" content=post.content/>
-                }
+                        // since we're using async rendering for this page,
+                        // this metadata should be included in the actual HTML <head>
+                        // when it's first served
+                        <Title text=post.title/>
+                        <Meta name="description" content=post.content/>
+                    }
+                })
             })
         })
     };
 
-    view! { cx,
-        <Suspense fallback=move || view! { cx, <p>"Loading post..."</p> }>
-            <ErrorBoundary fallback=|cx, errors| {
-                view! { cx,
+    view! {
+        <Suspense fallback=move || view! { <p>"Loading post..."</p> }>
+            <ErrorBoundary fallback=|errors| {
+                view! {
                     <div class="error">
                         <h1>"Something went wrong."</h1>
                         <ul>
                         {move || errors.get()
                             .into_iter()
-                            .map(|(_, error)| view! { cx, <li>{error.to_string()} </li> })
-                            .collect_view(cx)
+                            .map(|(_, error)| view! { <li>{error.to_string()} </li> })
+                            .collect_view()
                         }
                         </ul>
                     </div>
@@ -219,6 +224,6 @@ pub async fn get_post(id: usize) -> Result<Option<Post>, ServerFnError> {
 }
 
 #[component]
-fn NotFound(cx: Scope) -> impl IntoView {
-    view! { cx, <h1>"Not Found"</h1> }
+fn NotFound() -> impl IntoView {
+    view! { <h1>"Not Found"</h1> }
 }

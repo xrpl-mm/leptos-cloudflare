@@ -49,7 +49,6 @@ where
 {
     pub options: LeptosOptions,
     /// A set of local directories that should serve static assets from the KV store.
-    pub static_dirs: HashSet<String>,
     pub app_fn: AppFn,
 }
 
