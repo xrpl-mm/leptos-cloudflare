@@ -3,10 +3,10 @@ use std::collections::HashSet;
 use futures::{Stream, StreamExt};
 use leptos::leptos_server::server_fn_by_path;
 use leptos::server_fn::{Encoding, Payload};
-use leptos::{create_runtime, provide_context, raw_scope_and_disposer, Scope};
+use leptos::{create_runtime, provide_context};
 use leptos::{
     ssr::render_to_stream_with_prefix_undisposed_with_context_and_block_replacement, use_context,
-    IntoView, LeptosOptions, RuntimeId, ScopeId, View,
+    IntoView, LeptosOptions, RuntimeId, View,
 };
 use leptos_integration_utils::{build_async_response, html_parts_separated};
 use leptos_meta::{generate_head_metadata_separated, MetaContext};
@@ -45,11 +45,10 @@ pub struct ResponseOptions {
 pub struct WorkerRouterData<IV, AppFn>
 where
     IV: IntoView + 'static,
-    AppFn: Fn(leptos::Scope) -> IV + Clone + Send + 'static,
+    AppFn: Fn() -> IV + Clone + Send + 'static,
 {
     pub options: LeptosOptions,
     /// A set of local directories that should serve static assets from the KV store.
-    pub static_dirs: HashSet<String>,
     pub app_fn: AppFn,
 }
 
@@ -73,8 +72,8 @@ pub async fn generate_request_parts(req: &mut worker::Request) -> worker::Result
 /// it sets a [StatusCode] of 302 and a [LOCATION](header::LOCATION) header with the provided value.
 /// If looking to redirect from the client, `leptos_router::use_navigate()` should be used instead.
 #[tracing::instrument(level = "trace", fields(error), skip_all)]
-pub fn redirect(cx: leptos::Scope, path: &str) {
-    if let Some(mut response_options) = use_context::<ResponseOptions>(cx) {
+pub fn redirect(path: &str) {
+    if let Some(mut response_options) = use_context::<ResponseOptions>() {
         response_options.status = Some(302);
         response_options
             .insert_header("location", path)
@@ -89,7 +88,7 @@ pub async fn handle_server_fns<IV, AppFn>(
 ) -> worker::Result<worker::Response>
 where
     IV: IntoView + 'static,
-    AppFn: Fn(leptos::Scope) -> IV + Clone + Send + 'static,
+    AppFn: Fn() -> IV + Clone + Send + 'static,
 {
     let url = req.url()?;
     let path_segments = url.path_segments();
@@ -103,12 +102,11 @@ where
 
     if let Some(server_fn) = server_fn_by_path(api_path) {
         let runtime = create_runtime();
-        let (cx, disposer) = raw_scope_and_disposer(runtime);
 
         let req_parts = generate_request_parts(&mut req).await?;
-        provide_context(cx, req_parts.clone());
+        provide_context(req_parts.clone());
         // Add this so that we can set headers and status of the response
-        provide_context(cx, ResponseOptions::default());
+        provide_context(ResponseOptions::default());
 
         let query_bytes = &url.query().unwrap_or("").as_bytes();
 
@@ -117,10 +115,10 @@ where
             Encoding::GetJSON | Encoding::GetCBOR => query_bytes,
         };
 
-        let response = match server_fn.call(cx, data).await {
+        let response = match server_fn.call((), data).await {
             Ok(serialized) => {
                 // If ResponseOptions are set, add the headers and status to the request
-                let res_options = use_context::<ResponseOptions>(cx);
+                let res_options = use_context::<ResponseOptions>();
                 let accept_header = match req.headers().get("Accept") {
                     Ok(accept_header) => accept_header,
                     Err(_) => return worker::Response::error("Accept header not found", 500),
@@ -199,7 +197,6 @@ where
             }
         };
         // clean up the scope
-        disposer.dispose();
         runtime.dispose();
 
         Ok(response)
@@ -233,55 +230,55 @@ where
 
 /// Serves the static assets from the Cloudflare site's directory.
 /// These assets will be served by Cloudflare's KV Store.
-pub async fn serve_static_from_kv<IV, AppFn>(
-    req: worker::Request,
-    ctx: worker::RouteContext<WorkerRouterData<IV, AppFn>>,
-) -> worker::Result<worker::Response>
-where
-    IV: IntoView + 'static,
-    AppFn: Fn(leptos::Scope) -> IV + Clone + Send + 'static,
-{
-    let url = req.url();
-    let asset_key = url
-        .as_ref()
-        .ok()
-        .and_then(|url| url.path_segments())
-        .and_then(|mut path_segments| {
-            path_segments.next().and_then(|pkg_dir| {
-                if pkg_dir == ctx.data.options.site_pkg_dir
-                    || ctx.data.static_dirs.contains(pkg_dir)
-                {
-                    path_segments.next()
-                } else {
-                    None
-                }
-            })
-        });
+// pub async fn serve_static_from_kv<IV, AppFn>(
+//     req: worker::Request,
+//     ctx: worker::RouteContext<WorkerRouterData<IV, AppFn>>,
+// ) -> worker::Result<worker::Response>
+// where
+//     IV: IntoView + 'static,
+//     AppFn: Fn() -> IV + Clone + Send + 'static,
+// {
+//     let url = req.url();
+//     let asset_key = url
+//         .as_ref()
+//         .ok()
+//         .and_then(|url| url.path_segments())
+//         .and_then(|mut path_segments| {
+//             path_segments.next().and_then(|pkg_dir| {
+//                 if pkg_dir == ctx.data.options.site_pkg_dir
+//                     || ctx.data.static_dirs.contains(pkg_dir)
+//                 {
+//                     path_segments.next()
+//                 } else {
+//                     None
+//                 }
+//             })
+//         });
 
-    let asset_key = match asset_key {
-        Some(asset_key) => asset_key,
-        None => return worker::Response::error("Not found", 404),
-    };
-    let store = ctx.env.kv("__STATIC_CONTENT")?;
-    let file_path = match ctx.env.asset_key(asset_key) {
-        Ok(file_path) => file_path,
-        Err(_) => return worker::Response::error("Not found", 404),
-    };
+//     let asset_key = match asset_key {
+//         Some(asset_key) => asset_key,
+//         None => return worker::Response::error("Not found", 404),
+//     };
+//     let store = ctx.env.kv("__STATIC_CONTENT")?;
+//     let file_path = match ctx.env.asset_key(asset_key) {
+//         Ok(file_path) => file_path,
+//         Err(_) => return worker::Response::error("Not found", 404),
+//     };
 
-    if let Some(bytes) = store.get(&file_path).bytes().await? {
-        let mut response = worker::Response::from_bytes(bytes)?;
-        let content_type = match mime_guess::from_path(file_path).first() {
-            Some(content_type) => content_type,
-            None => return worker::Response::error("Unsupported file type", 415),
-        };
-        response
-            .headers_mut()
-            .set("Content-Type", content_type.essence_str())?;
-        Ok(response)
-    } else {
-        worker::Response::error("Not found", 404)
-    }
-}
+//     if let Some(bytes) = store.get(&file_path).bytes().await? {
+//         let mut response = worker::Response::from_bytes(bytes)?;
+//         let content_type = match mime_guess::from_path(file_path).first() {
+//             Some(content_type) => content_type,
+//             None => return worker::Response::error("Unsupported file type", 415),
+//         };
+//         response
+//             .headers_mut()
+//             .set("Content-Type", content_type.essence_str())?;
+//         Ok(response)
+//     } else {
+//         worker::Response::error("Not found", 404)
+//     }
+// }
 
 #[tracing::instrument(level = "trace", fields(error), skip_all)]
 pub fn render_app_to_stream_with_context<'a, 'b, IV, AppFn>(
@@ -291,7 +288,7 @@ pub fn render_app_to_stream_with_context<'a, 'b, IV, AppFn>(
 ) -> worker::Router<'b, WorkerRouterData<IV, AppFn>>
 where
     IV: IntoView + 'static,
-    AppFn: Fn(leptos::Scope) -> IV + Clone + Send + 'static,
+    AppFn: Fn() -> IV + Clone + Send + 'static,
 {
     let handler = |mut req: worker::Request,
                    ctx: worker::RouteContext<WorkerRouterData<IV, AppFn>>| async move {
@@ -304,18 +301,13 @@ where
 
             let request_parts = generate_request_parts(&mut req).await?;
 
-            move |cx| {
-                provide_contexts(
-                    cx,
-                    request_parts.url.to_string(),
-                    request_parts,
-                    res_options,
-                );
-                (app_fn)(cx).into_view(cx)
+            move || {
+                provide_contexts(request_parts.url.to_string(), request_parts, res_options);
+                (app_fn)().into_view()
             }
         };
 
-        stream_app(&options, app, res_options, |_| {}, false).await
+        stream_app(&options, app, res_options, || {}, false).await
     };
 
     match method {
@@ -341,7 +333,7 @@ pub fn render_app_to_stream_with_context_and_replace_blocks<'a, 'b, IV, AppFn>(
 ) -> worker::Router<'b, WorkerRouterData<IV, AppFn>>
 where
     IV: IntoView + 'static,
-    AppFn: Fn(leptos::Scope) -> IV + Clone + Send + 'static,
+    AppFn: Fn() -> IV + Clone + Send + 'static,
 {
     let handler = |mut req: worker::Request,
                    ctx: worker::RouteContext<WorkerRouterData<IV, AppFn>>| async move {
@@ -354,18 +346,13 @@ where
 
             let request_parts = generate_request_parts(&mut req).await?;
 
-            move |cx| {
-                provide_contexts(
-                    cx,
-                    request_parts.url.to_string(),
-                    request_parts,
-                    res_options,
-                );
-                (app_fn)(cx).into_view(cx)
+            move || {
+                provide_contexts(request_parts.url.to_string(), request_parts, res_options);
+                (app_fn)().into_view()
             }
         };
 
-        stream_app(&options, app, res_options, |_| {}, true).await
+        stream_app(&options, app, res_options, || {}, true).await
     };
 
     match method {
@@ -380,9 +367,7 @@ where
 /// Generates a list of all routes defined in Leptos's Router in your app. We can then use this to automatically
 /// create routes in Actix's App without having to use wildcard matching or fallbacks. Takes in your root app Element
 /// as an argument so it can walk you app tree. This version is tailored to generated Actix compatible paths.
-pub fn generate_route_list<IV>(
-    app_fn: impl FnOnce(leptos::Scope) -> IV + 'static,
-) -> Vec<RouteListing>
+pub fn generate_route_list<IV>(app_fn: impl Fn() -> IV + 'static + Clone) -> Vec<RouteListing>
 where
     IV: IntoView + 'static,
 {
@@ -394,13 +379,13 @@ where
 /// as an argument so it can walk you app tree. This version is tailored to generated Actix compatible paths. Adding excluded_routes
 /// to this function will stop `.leptos_routes()` from generating a route for it, allowing a custom handler. These need to be in Actix path format
 pub fn generate_route_list_with_exclusions<IV>(
-    app_fn: impl FnOnce(leptos::Scope) -> IV + 'static,
+    app_fn: impl Fn() -> IV + 'static + Clone,
     excluded_routes: Option<Vec<String>>,
 ) -> Vec<RouteListing>
 where
     IV: IntoView + 'static,
 {
-    let mut routes = leptos_router::generate_route_list_inner(app_fn);
+    let (mut routes, static_data_map) = leptos_router::generate_route_list_inner(app_fn);
 
     // Empty strings screw with Actix pathing, they need to be "/"
     routes = routes
@@ -408,17 +393,26 @@ where
         .map(|listing| {
             let path = listing.path();
             if path.is_empty() {
-                return RouteListing::new("/".to_string(), listing.mode(), listing.methods());
+                RouteListing::new(
+                    "/".to_string(),
+                    listing.path(),
+                    listing.mode(),
+                    listing.methods(),
+                    listing.static_mode(),
+                )
+            } else {
+                listing
             }
-            RouteListing::new(listing.path(), listing.mode(), listing.methods())
         })
         .collect::<Vec<_>>();
 
     if routes.is_empty() {
         vec![RouteListing::new(
             "/",
+            "",
             Default::default(),
-            [LeptosMethod::Get],
+            [leptos_router::Method::Get],
+            None,
         )]
     } else {
         // Routes to exclude from auto generation
@@ -432,18 +426,18 @@ where
 #[tracing::instrument(level = "trace", fields(error), skip_all)]
 async fn render_app_async_helper(
     options: &LeptosOptions,
-    app: impl FnOnce(leptos::Scope) -> View + 'static,
+    app: impl FnOnce() -> View + 'static,
     mut res_options: ResponseOptions,
-    additional_context: impl Fn(leptos::Scope) + 'static + Clone + Send,
+    additional_context: impl Fn() + 'static + Clone + Send,
 ) -> Result<worker::Response, worker::Error> {
-    let (stream, runtime, scope) =
+    let (stream, runtime) =
         leptos::ssr::render_to_stream_in_order_with_prefix_undisposed_with_context(
             app,
-            move |_| "".into(),
+            move || "".into(),
             additional_context,
         );
 
-    let html = build_async_response(stream, options, runtime, scope).await;
+    let html = build_async_response(stream, options, runtime).await;
 
     let status = res_options.status.unwrap_or(200);
 
@@ -467,7 +461,7 @@ pub fn render_app_async_with_context<'a, 'b, IV, AppFn>(
 ) -> worker::Router<'b, WorkerRouterData<IV, AppFn>>
 where
     IV: IntoView + 'static,
-    AppFn: Fn(leptos::Scope) -> IV + Clone + Send + 'static,
+    AppFn: Fn() -> IV + Clone + Send + 'static,
 {
     let handler = |mut req: worker::Request,
                    ctx: worker::RouteContext<WorkerRouterData<IV, AppFn>>| async move {
@@ -480,18 +474,13 @@ where
 
             let request_parts = generate_request_parts(&mut req).await?;
 
-            move |cx| {
-                provide_contexts(
-                    cx,
-                    request_parts.url.to_string(),
-                    request_parts,
-                    res_options,
-                );
-                (app_fn)(cx).into_view(cx)
+            move || {
+                provide_contexts(request_parts.url.to_string(), request_parts, res_options);
+                (app_fn)().into_view()
             }
         };
 
-        render_app_async_helper(&options, app, res_options, |_| {}).await
+        render_app_async_helper(&options, app, res_options, || {}).await
     };
 
     match method {
@@ -511,7 +500,7 @@ pub fn render_app_to_stream_in_order_with_context<'a, 'b, IV, AppFn>(
 ) -> worker::Router<'b, WorkerRouterData<IV, AppFn>>
 where
     IV: IntoView + 'static,
-    AppFn: Fn(leptos::Scope) -> IV + Clone + Send + 'static,
+    AppFn: Fn() -> IV + Clone + Send + 'static,
 {
     let handler = |mut req: worker::Request,
                    ctx: worker::RouteContext<WorkerRouterData<IV, AppFn>>| async move {
@@ -524,18 +513,13 @@ where
 
             let request_parts = generate_request_parts(&mut req).await?;
 
-            move |cx| {
-                provide_contexts(
-                    cx,
-                    request_parts.url.to_string(),
-                    request_parts,
-                    res_options,
-                );
-                (app_fn)(cx).into_view(cx)
+            move || {
+                provide_contexts(request_parts.url.to_string(), request_parts, res_options);
+                (app_fn)().into_view()
             }
         };
 
-        stream_app_in_order(&options, app, res_options, |_| {}).await
+        stream_app_in_order(&options, app, res_options, || {}).await
     };
 
     match method {
@@ -549,18 +533,18 @@ where
 
 async fn stream_app_in_order(
     options: &LeptosOptions,
-    app: impl FnOnce(leptos::Scope) -> View + 'static,
+    app: impl FnOnce() -> View + 'static,
     res_options: ResponseOptions,
-    additional_context: impl Fn(leptos::Scope) + 'static + Clone + Send,
+    additional_context: impl Fn() + 'static + Clone + Send,
 ) -> worker::Result<worker::Response> {
-    let (stream, runtime, scope) =
+    let (stream, runtime) =
         leptos::ssr::render_to_stream_in_order_with_prefix_undisposed_with_context(
             app,
-            move |cx| generate_head_metadata_separated(cx).1.into(),
+            move || generate_head_metadata_separated().1.into(),
             additional_context,
         );
 
-    build_stream_response(options, res_options, stream, runtime, scope).await
+    build_stream_response(options, res_options, stream, runtime).await
 }
 
 #[tracing::instrument(level = "trace", fields(error), skip_all)]
@@ -569,15 +553,13 @@ async fn build_stream_response(
     mut res_options: ResponseOptions,
     stream: impl Stream<Item = String> + 'static,
     runtime: RuntimeId,
-    scope: ScopeId,
 ) -> worker::Result<worker::Response> {
-    let cx = leptos::Scope { runtime, id: scope };
     let mut stream = Box::pin(stream);
 
     // wait for any blocking resources to load before pulling metadata
     let first_app_chunk = stream.next().await.unwrap_or_default();
 
-    let (head, tail) = html_parts_separated(cx, options, use_context::<MetaContext>(cx).as_ref());
+    let (head, tail) = html_parts_separated(options, use_context::<MetaContext>().as_ref());
 
     let mut stream = Box::pin(
         futures::stream::once(async move { head.clone() })
@@ -611,34 +593,29 @@ async fn build_stream_response(
 #[tracing::instrument(level = "trace", fields(error), skip_all)]
 async fn stream_app(
     options: &LeptosOptions,
-    app: impl FnOnce(leptos::Scope) -> View + 'static,
+    app: impl FnOnce() -> View + 'static,
     res_options: ResponseOptions,
-    additional_context: impl Fn(leptos::Scope) + 'static + Clone,
+    additional_context: impl Fn() + 'static + Clone,
     replace_blocks: bool,
 ) -> worker::Result<worker::Response> {
-    let (stream, runtime, scope) =
+    let (stream, runtime) =
         render_to_stream_with_prefix_undisposed_with_context_and_block_replacement(
             app,
-            move |cx| generate_head_metadata_separated(cx).1.into(),
+            move || generate_head_metadata_separated().1.into(),
             additional_context,
             replace_blocks,
         );
 
-    build_stream_response(options, res_options, stream, runtime, scope).await
+    build_stream_response(options, res_options, stream, runtime).await
 }
 
-fn provide_contexts(
-    cx: Scope,
-    path: String,
-    req: RequestParts,
-    default_res_options: ResponseOptions,
-) {
+fn provide_contexts(path: String, req: RequestParts, default_res_options: ResponseOptions) {
     let integration = ServerIntegration { path };
-    provide_context(cx, RouterIntegrationContext::new(integration));
-    provide_context(cx, MetaContext::new());
-    provide_context(cx, req);
-    provide_context(cx, default_res_options);
-    provide_server_redirect(cx, move |path| redirect(cx, path));
+    provide_context(RouterIntegrationContext::new(integration));
+    provide_context(MetaContext::new());
+    provide_context(req);
+    provide_context(default_res_options);
+    provide_server_redirect(move |path| redirect(path));
     #[cfg(feature = "nonce")]
     leptos::nonce::provide_nonce(cx);
 }
@@ -657,7 +634,7 @@ impl ResponseOptions {
 impl<'a, IV, AppFn> LeptosRoutes for worker::Router<'a, WorkerRouterData<IV, AppFn>>
 where
     IV: IntoView + 'static,
-    AppFn: Fn(leptos::Scope) -> IV + Clone + Send + 'static,
+    AppFn: Fn() -> IV + Clone + Send + 'static,
 {
     fn leptos_routes(self, paths: Vec<RouteListing>) -> Self {
         let mut cf_router = self;
